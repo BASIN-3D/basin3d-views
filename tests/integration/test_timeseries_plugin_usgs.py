@@ -5,7 +5,6 @@ import pandas as pd
 import pytest
 
 from basin3d.core.schema.enum import ResultQualityEnum, TimeFrequencyEnum
-from basin3d.core.types import SamplingMedium
 from basin3d.synthesis import register
 from basin3d_views.timeseries import get_timeseries_data
 
@@ -45,7 +44,7 @@ def test_usgs_get_data():
     assert var_metadata['statistic'] == 'MEAN'
     assert var_metadata['temporal_aggregation'] == TimeFrequencyEnum.DAY
     assert var_metadata['quality'] == ResultQualityEnum.VALIDATED
-    assert var_metadata['sampling_medium'] == SamplingMedium.WATER
+    assert var_metadata['sampling_medium'] == 'WATER'
     assert var_metadata['sampling_feature_id'] == 'USGS-09110000'
     assert var_metadata['datasource'] == 'USGS'
     assert var_metadata['datasource_variable'] == '00060'
