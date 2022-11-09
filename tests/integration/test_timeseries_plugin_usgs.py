@@ -5,7 +5,6 @@ import pandas as pd
 import pytest
 
 from basin3d.core.schema.enum import ResultQualityEnum, TimeFrequencyEnum
-from basin3d.core.types import SamplingMedium
 from basin3d.synthesis import register
 from basin3d_views.timeseries import get_timeseries_data
 
@@ -13,8 +12,8 @@ from basin3d_views.timeseries import get_timeseries_data
 @pytest.mark.integration
 def test_usgs_get_data():
     synthesizer = register(['basin3d.plugins.usgs.USGSDataSourcePlugin'])
-    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_features=["USGS-09110000"],
-                                    observed_property_variables=['RDC', 'WT'], start_date='2019-10-25',
+    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_feature=["USGS-09110000"],
+                                    observed_property=['RDC', 'WT'], start_date='2019-10-25',
                                     end_date='2019-10-28')
     usgs_df = usgs_data.data
     usgs_metadata_df = usgs_data.metadata
@@ -45,7 +44,7 @@ def test_usgs_get_data():
     assert var_metadata['statistic'] == 'MEAN'
     assert var_metadata['temporal_aggregation'] == TimeFrequencyEnum.DAY
     assert var_metadata['quality'] == ResultQualityEnum.VALIDATED
-    assert var_metadata['sampling_medium'] == SamplingMedium.WATER
+    assert var_metadata['sampling_medium'] == 'WATER'
     assert var_metadata['sampling_feature_id'] == 'USGS-09110000'
     assert var_metadata['datasource'] == 'USGS'
     assert var_metadata['datasource_variable'] == '00060'
@@ -54,8 +53,8 @@ def test_usgs_get_data():
     assert usgs_metadata_df['USGS-09110000__WT__MAX']['statistic'] == 'MAX'
 
     # check filtering by single statistic
-    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_features=["USGS-09110000"],
-                                    observed_property_variables=['RDC', 'WT'], start_date='2019-10-25',
+    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_feature=["USGS-09110000"],
+                                    observed_property=['RDC', 'WT'], start_date='2019-10-25',
                                     end_date='2019-10-28', statistic=['MEAN'])
     usgs_df = usgs_data.data
 
@@ -66,8 +65,8 @@ def test_usgs_get_data():
     assert usgs_df.shape == (4, 3)
 
     # check filtering by multiple statistic
-    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_features=["USGS-09110000"],
-                                    observed_property_variables=['RDC', 'WT'], start_date='2019-10-25',
+    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_feature=["USGS-09110000"],
+                                    observed_property=['RDC', 'WT'], start_date='2019-10-25',
                                     end_date='2019-10-28', statistic=['MIN', 'MAX'])
     usgs_df = usgs_data.data
 
@@ -78,8 +77,8 @@ def test_usgs_get_data():
     assert usgs_df.shape == (4, 3)
 
     # check filtering by quality = VALIDATED (filter by MEAN)
-    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_features=["USGS-09110000"],
-                                    observed_property_variables=['RDC', 'WT'], start_date='2019-10-25',
+    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_feature=["USGS-09110000"],
+                                    observed_property=['RDC', 'WT'], start_date='2019-10-25',
                                     end_date='2019-10-28', result_quality=[ResultQualityEnum.VALIDATED],
                                     statistic=['MEAN'])
     usgs_df = usgs_data.data
@@ -91,8 +90,8 @@ def test_usgs_get_data():
     assert usgs_df.shape == (4, 3)
 
     # check filtering by quality = UNVALIDATED (filter by MEAN)
-    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_features=["USGS-09110000"],
-                                    observed_property_variables=['RDC', 'WT'], start_date='2019-10-25',
+    usgs_data = get_timeseries_data(synthesizer=synthesizer, monitoring_feature=["USGS-09110000"],
+                                    observed_property=['RDC', 'WT'], start_date='2019-10-25',
                                     end_date='2019-10-28', result_quality=[ResultQualityEnum.UNVALIDATED],
                                     statistic=['MEAN'])
     usgs_df = usgs_data.data
