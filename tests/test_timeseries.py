@@ -6,8 +6,7 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
-from basin3d.core.schema.enum import ResultQualityEnum, TimeFrequencyEnum
-from basin3d.core.types import SamplingMedium
+from basin3d.core.schema.enum import ResultQualityEnum, SamplingMediumEnum, TimeFrequencyEnum
 from basin3d.synthesis import register
 from basin3d_views.timeseries import TimeseriesOutputType, get_timeseries_data, PandasTimeseriesData, \
     HDFTimeseriesData
@@ -20,17 +19,17 @@ def test_get_timeseries_data_errors():
     # missing argument
     with pytest.raises(ValidationError):
         get_timeseries_data(synthesizer=synthesizer,
-                            monitoring_features=[], observed_property_variables=['ACT'], start_date='2019-01-01')
+                            monitoring_feature=[], observed_property=['ACT'], start_date='2019-01-01')
 
     # missing required parameter
     with pytest.raises(ValidationError):
         get_timeseries_data(synthesizer=synthesizer,
-                            observed_property_variables=['ACT'], start_date='2019-01-01')
+                            observed_property=['ACT'], start_date='2019-01-01')
 
     # output directory doesn't exist
     with pytest.raises(ValidationError):
         get_timeseries_data(synthesizer=synthesizer, output_path='./foo',
-                            observed_property_variables=['ACT'], start_date='2019-01-01')
+                            observed_property=['ACT'], start_date='2019-01-01')
 
 
 @pytest.mark.parametrize('output_type, output_path, cleanup',
@@ -56,8 +55,8 @@ def test_get_timeseries_data(output_type, output_path, cleanup):
 
         result = get_timeseries_data(synthesizer=synthesizer, output_path=output_path, output_type=output_type,
                                      cleanup=cleanup,
-                                     monitoring_features=['E-1', 'E-2', 'E-3', 'E-4'],
-                                     observed_property_variables=['ACT', 'Al'], start_date='2016-02-01')
+                                     monitoring_feature=['E-1', 'E-2', 'E-3', 'E-4'],
+                                     observed_property=['ACT', 'Al'], start_date='2016-02-01')
 
         assert result
         assert output_type is TimeseriesOutputType.PANDAS and isinstance(result, PandasTimeseriesData) or \
@@ -77,8 +76,8 @@ def test_get_timeseries_data(output_type, output_path, cleanup):
             assert result.output_path is not None
 
             assert result.hdf.attrs['aggregation_duration'] == 'DAY'
-            assert list(result.hdf.attrs['monitoring_features']) == ['E-1', 'E-2', 'E-3', 'E-4']
-            assert list(result.hdf.attrs['observed_property_variables']) == ['ACT', 'Al']
+            assert list(result.hdf.attrs['monitoring_feature']) == ['E-1', 'E-2', 'E-3', 'E-4']
+            assert list(result.hdf.attrs['observed_property']) == ['ACT', 'Al']
             assert result.hdf.attrs['query_start_time']
             assert result.hdf.attrs['query_end_time']
             assert result.hdf.attrs['start_date']
@@ -116,7 +115,7 @@ def test_get_timeseries_data(output_type, output_path, cleanup):
         assert var_metadata['statistic'] == 'MEAN'
         assert var_metadata['temporal_aggregation'] == TimeFrequencyEnum.DAY
         assert var_metadata['quality'] == ResultQualityEnum.VALIDATED
-        assert var_metadata['sampling_medium'] == SamplingMedium.WATER
+        assert var_metadata['sampling_medium'] == SamplingMediumEnum.WATER
         assert var_metadata['sampling_feature_id'] == 'E-1'
         assert var_metadata['datasource'] == 'Example'
         assert var_metadata['datasource_variable'] == 'Acetate'
@@ -145,7 +144,7 @@ def test_get_timeseries_data(output_type, output_path, cleanup):
         assert var_metadata['statistic'] == 'MEAN'
         assert var_metadata['temporal_aggregation'] == TimeFrequencyEnum.DAY
         assert var_metadata['quality'] is None
-        assert var_metadata['sampling_medium'] == SamplingMedium.WATER
+        assert var_metadata['sampling_medium'] == SamplingMediumEnum.WATER
         assert var_metadata['sampling_feature_id'] == 'E-3'
         assert var_metadata['datasource'] == 'Example'
         assert var_metadata['datasource_variable'] == 'Aluminum'
@@ -168,56 +167,48 @@ REJ = ResultQualityEnum.REJECTED
 @pytest.mark.parametrize('filters, expected_results',
                          [
                              # monitoring_features
-                             ({'monitoring_features': ['E-1', 'E-2']},
-                              {'has_data': True, 'columns': ['TIMESTAMP', 'E-1__ACT__MEAN', 'E-2__ACT__MAX'],
-                               'df_shape': (9, 3),
+                             ({'monitoring_feature': ['E-1', 'E-2']},
+                              {'has_data': True, 'columns': ['TIMESTAMP', 'E-1__ACT__MEAN', 'E-2__ACT__MAX'], 'df_shape': (9, 3),
                                'no_observations_variable': None,
                                'quality_filter_checks': {}}),
                              # statistic
-                             ({'monitoring_features': ['E-1', 'E-2', 'E-3', 'E-4'], 'statistic': ['MEAN']},
+                             ({'monitoring_feature': ['E-1', 'E-2', 'E-3', 'E-4'], 'statistic': ['MEAN']},
                               {'has_data': True, 'columns': ['TIMESTAMP', 'E-1__ACT__MEAN'], 'df_shape': (9, 2),
                                'no_observations_variable': ['E-3__Al__MEAN'],
                                'quality_filter_checks': {}}),
                              # monitoring_feature_and_statistic
-                             ({'monitoring_features': ['E-3', 'E-4'], 'statistic': ['MIN']},
+                             ({'monitoring_feature': ['E-3', 'E-4'], 'statistic': ['MIN']},
                               {'has_data': False, 'columns': None, 'df_shape': None,
                                'no_observations_variable': None,
                                'quality_filter_checks': {}}),
                              # quality-VALIDATED
-                             ({'monitoring_features': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [VAL]},
-                              {'has_data': True, 'columns': ['TIMESTAMP', 'E-1__ACT__MEAN', 'E-4__Al__MAX'],
-                               'df_shape': (9, 3),
+                             ({'monitoring_feature': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [VAL]},
+                              {'has_data': True, 'columns': ['TIMESTAMP', 'E-1__ACT__MEAN', 'E-4__Al__MAX'], 'df_shape': (9, 3),
                                'no_observations_variable': [],
                                'quality_filter_checks': [('E-1__ACT__MEAN', 9, [VAL]), ('E-4__Al__MAX', 7, [VAL])]}),
                              # quality-UNVALIDATED
-                             ({'monitoring_features': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [UNVAL]},
-                              {'has_data': True, 'columns': ['TIMESTAMP', 'E-2__ACT__MAX', 'E-4__Al__MAX'],
-                               'df_shape': (7, 3),
+                             ({'monitoring_feature': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [UNVAL]},
+                              {'has_data': True, 'columns': ['TIMESTAMP', 'E-2__ACT__MAX', 'E-4__Al__MAX'], 'df_shape': (7, 3),
                                'no_observations_variable': [],
                                'quality_filter_checks': [('E-2__ACT__MAX', 7, [UNVAL]), ('E-4__Al__MAX', 1, [UNVAL])]}),
                              # quality-VALIDATED+UNVALIDATED
-                             ({'monitoring_features': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [VAL, UNVAL]},
-                              {'has_data': True,
-                               'columns': ['TIMESTAMP', 'E-1__ACT__MEAN', 'E-2__ACT__MAX', 'E-4__Al__MAX'],
-                               'df_shape': (9, 4),
+                             ({'monitoring_feature': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [VAL, UNVAL]},
+                              {'has_data': True, 'columns': ['TIMESTAMP', 'E-1__ACT__MEAN', 'E-2__ACT__MAX', 'E-4__Al__MAX'], 'df_shape': (9, 4),
                                'no_observations_variable': [],
-                               'quality_filter_checks': [('E-1__ACT__MEAN', 9, [VAL]), ('E-2__ACT__MAX', 7, [UNVAL]),
-                                                         ('E-4__Al__MAX', 8, [VAL, UNVAL])]}),
+                               'quality_filter_checks': [('E-1__ACT__MEAN', 9, [VAL]), ('E-2__ACT__MAX', 7, [UNVAL]), ('E-4__Al__MAX', 8, [VAL, UNVAL])]}),
                              # quality-ESTIMATED: no data
-                             ({'monitoring_features': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [EST]},
+                             ({'monitoring_feature': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [EST]},
                               {'has_data': False, 'columns': None, 'df_shape': None,
                                'no_observations_variable': [],  # b/c no MeasTVPOvs returned, this is none
                                'quality_filter_checks': []}),
                              # statistic_and_quality: MAX and VALIDATED
-                             ({'monitoring_features': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [VAL],
-                               'statistic': ['MEAN']},
+                             ({'monitoring_feature': ['E-1', 'E-2', 'E-3', 'E-4'], 'result_quality': [VAL], 'statistic': ['MEAN']},
                               {'has_data': True, 'columns': ['TIMESTAMP', 'E-1__ACT__MEAN'], 'df_shape': (9, 2),
                                'no_observations_variable': [],
                                'quality_filter_checks': [('E-1__ACT__MEAN', 9, [VAL])]}),
                          ],
                          ids=['monitoring_features', 'statistic', 'monitoring_feature_and_statistic',
-                              'quality-VALIDATED', 'quality-UNVALIDATED', 'quality-VALIDATED+UNVALIDATED',
-                              'quality-ESTIMATED',
+                              'quality-VALIDATED', 'quality-UNVALIDATED', 'quality-VALIDATED+UNVALIDATED', 'quality-ESTIMATED',
                               'statistic_and_quality: MAX and VALIDATED'])
 def test_get_timeseries_data_filtering(filters, expected_results):
     """Test processing for get_timeseries_data statistic"""
@@ -226,7 +217,7 @@ def test_get_timeseries_data_filtering(filters, expected_results):
 
     result = get_timeseries_data(synthesizer=synthesizer, output_path=None,
                                  output_type=TimeseriesOutputType.PANDAS, cleanup=True,
-                                 observed_property_variables=['ACT', 'Al'], start_date='2016-02-01',
+                                 observed_property=['ACT', 'Al'], start_date='2016-02-01',
                                  **filters)
     assert result
     df = result.data
