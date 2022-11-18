@@ -276,6 +276,8 @@ def get_timeseries_data(synthesizer: DataSynthesizer, location_lat_long: bool = 
     # Check that required parameters are provided. May have to rethink this when we expand to mulitple observation types
     if temporal_resolution:
         kwargs['aggregation_duration'] = temporal_resolution
+        if temporal_resolution in ['MINUTE', 'SECOND', 'HOUR']:
+            kwargs['aggregation_duration'] = 'NONE'
     query = QueryMeasurementTimeseriesTVP(**kwargs)
 
     # Get the data
@@ -419,14 +421,14 @@ def get_timeseries_data(synthesizer: DataSynthesizer, location_lat_long: bool = 
         if output_type is TimeseriesOutputType.PANDAS:
             output = _output_df(working_directory, output_name, query_info, metadata_store, first_timestamp,
                                 last_timestamp,
-                                query.aggregation_duration)
+                                query.aggregation_duration != 'NONE' and query.aggregation_duration or temporal_resolution)
             if cleanup:
                 # There will be no output data left
                 output.output_path = None
         elif output_type is TimeseriesOutputType.HDF:
             output = _output_hdf(working_directory, output_name, query_info, metadata_store, first_timestamp,
                                  last_timestamp,
-                                 query.aggregation_duration)
+                                 query.aggregation_duration != 'NONE' and query.aggregation_duration or temporal_resolution)
         else:
             raise NotImplementedError
 
