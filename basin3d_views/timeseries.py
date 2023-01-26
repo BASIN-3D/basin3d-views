@@ -80,50 +80,70 @@ class QueryInfo:
     parameters: QueryBase
 
 
-@dataclass
 class SynthesizedTimeseriesData:
     """
     Base class used in the return for :func:`get_timeseries_data` function.
 
     This class contains synthesized data with timestamp, monitoring feature id,
-    observed property variable id in a pandas DataFrame (optional) and metadata dictionary (optional).
+    observed property, and statistic in a pandas DataFrame (optional) and metadata dictionary (optional).
 
     """
 
-    data: pd.DataFrame
-    """The time series data
-    **pandas dataframe:** with synthesized data of timestamp, monitoring feature, and observed property variable id
+    def __init__(self, data: pd.DataFrame, metadata: pd.DataFrame, metadata_no_observations: pd.DataFrame,
+                 output_path: Union[str, None], query: QueryInfo):
+        self._data = data
+        self._metadata = metadata
+        self._metadata_no_observations = metadata_no_observations
+        self._output_path = output_path
+        self._query = query
 
-    .. code-block::
+    @property
+    def data(self) -> pd.DataFrame:
+        """The time series data
+        **pandas dataframe:** with synthesized data of timestamp, monitoring feature, and observed property with statistic if applicable
 
-                    TIMESTAMP  USGS-09110000__WT  USGS-09110000__RDC
-        2019-10-25 2019-10-25                3.2            4.247527
-        2019-10-26 2019-10-26                4.1            4.219210
-        2019-10-27 2019-10-27                4.3            4.134260
-        2019-10-28 2019-10-28                3.2            4.332478
-        2019-10-29 2019-10-29                2.2            4.219210
-        2019-10-30 2019-10-30                0.5            4.247527
+        .. code-block::
 
-        # timestamp column: datetime, repr as ISO format
-        column name format = f'{start_date end_date}
+                        TIMESTAMP  USGS-09110000__WT__MEAN  USGS-09110000__RDC__MEAN
+            2019-10-25 2019-10-25                      3.2                  4.247527
+            2019-10-26 2019-10-26                      4.1                  4.219210
+            2019-10-27 2019-10-27                      4.3                  4.134260
+            2019-10-28 2019-10-28                      3.2                  4.332478
+            2019-10-29 2019-10-29                      2.2                  4.219210
+            2019-10-30 2019-10-30                      0.5                  4.247527
 
-        # data columns: monitoring feature id and observed property id
-        column name format = f'{monitoring_feature}__{observed_property}'
+            # timestamp column: datetime, repr as ISO format
+            column name format = f'{start_date end_date}
 
+            # data columns: monitoring feature id and observed property id
+            column name format = f'{monitoring_feature}__{observed_property}__{statistic}'
 
-    """
+        """
+        return self._data
 
-    metadata: pd.DataFrame
-    """Metadata for the observations that have data"""
+    @property
+    def metadata(self) -> pd.DataFrame:
+        """Metadata for the observations that have data"""
+        return self._metadata
 
-    metadata_no_observations: pd.DataFrame
-    """Metadata for the observations that have **no** data"""
+    @property
+    def metadata_no_observations(self) -> pd.DataFrame:
+        """Metadata for the observations that have **no** data"""
+        return self._metadata_no_observations
 
-    output_path: Union[str, None]
-    """The file path where the output data was saved, if exists. Optional means a return value of ``None``."""
+    @property
+    def output_path(self) -> Union[str, None]:
+        """The file path where the output data was saved, if exists. Optional means a return value of ``None``."""
+        return self._output_path
 
-    query: QueryInfo
-    """Time series synthesis query information"""
+    @output_path.setter
+    def output_path(self, value: Union[str, None]):
+        self._output_path = value
+
+    @property
+    def query(self) -> QueryInfo:
+        """Time series synthesis query information"""
+        return self._query
 
     @property
     def variables(self) -> list:
@@ -136,7 +156,6 @@ class SynthesizedTimeseriesData:
         return []
 
 
-@dataclass
 class PandasTimeseriesData(SynthesizedTimeseriesData):
     """
     Class for Pandas time series data
@@ -153,29 +172,51 @@ class PandasTimeseriesData(SynthesizedTimeseriesData):
         return [c for c in self.metadata_no_observations.columns if c != 'TIMESTAMP']
 
 
-@dataclass(init=False)
 class HDFTimeseriesData(SynthesizedTimeseriesData):
     """
     Class for HDF5 time series data. The underlying
     data storage is an HDF5 file
     """
-    hdf: h5py.File
 
     def __init__(self, hdf: h5py.File, output_path: str, query: QueryInfo):
         """
         Time Series data stored as HDF files.
 
-        :param hdf: The hdf timeseries dafile
-        :param output_path:
-        :param query:
+        :param hdf: The hdf file containing time series data and metadata file
+        :param output_path: path where hdf file is located
+        :param query: Time series query information
         """
-        self.hdf = hdf
-        self.output_path = output_path
-        self.query = query
+        self._hdf = hdf
+        self._output_path = output_path
+        self._query = query
+
+    @property
+    def hdf(self) -> h5py.File:
+        """The hdf file containing time series data and metadata"""
+        return self._hdf
 
     @property
     def data(self) -> pd.DataFrame:
-        """The time series data as a pandas dataframe"""
+        """The time series data
+        **pandas dataframe:** with synthesized data of timestamp, monitoring feature, and observed property with statistic if applicable
+
+        .. code-block::
+
+                        TIMESTAMP  USGS-09110000__WT__MEAN  USGS-09110000__RDC__MEAN
+            2019-10-25 2019-10-25                      3.2                  4.247527
+            2019-10-26 2019-10-26                      4.1                  4.219210
+            2019-10-27 2019-10-27                      4.3                  4.134260
+            2019-10-28 2019-10-28                      3.2                  4.332478
+            2019-10-29 2019-10-29                      2.2                  4.219210
+            2019-10-30 2019-10-30                      0.5                  4.247527
+
+            # timestamp column: datetime, repr as ISO format
+            column name format = f'{start_date end_date}
+
+            # data columns: monitoring feature id and observed property id
+            column name format = f'{monitoring_feature}__{observed_property}__{statistic}'
+
+        """
         return pd.read_hdf(self.hdf.filename, key='data')
 
     @property
