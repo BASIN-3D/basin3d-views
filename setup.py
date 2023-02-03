@@ -35,8 +35,8 @@ if os.path.exists(version_py):
 if sys.version_info.major == 2:
     sys.exit('Sorry, Python <= 2.X is not supported')
 
-if sys.version_info.major == 3 and sys.version_info.minor < 7:
-    sys.exit('Sorry, Python < 3.7 is not supported')
+if sys.version_info.major == 3 and sys.version_info.minor < 8:
+    sys.exit('Sorry, Python < 3.8 is not supported')
 
 packages = find_packages(exclude=["*.tests", ])
 
