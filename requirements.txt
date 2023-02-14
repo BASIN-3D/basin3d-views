@@ -1,4 +1,4 @@
-git+https://github.com/BASIN-3D/basin3d.git@0.3.0#egg=basin3d
+basin3d
 pandas==1.1.5
 h5py
 tables
